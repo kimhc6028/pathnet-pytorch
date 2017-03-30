@@ -1,11 +1,12 @@
 import argparse
 import torch
 from torchvision import datasets, transforms
+import random
 
 import pathnet
 import genotype
 import mnist_dataset
-import random
+import visualize
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
@@ -47,6 +48,7 @@ if args.cuda:
 def main():
     model = pathnet.Net(args)
     gene = genotype.Genetic(3, 10, 3, 64)
+    visualizer = visualize.GraphVisualize(args.module_num)
     
     if args.cuda:
         model.cuda()
@@ -72,6 +74,8 @@ def main():
         print("Epoch {} :Fitnesses = {} vs {}".format(epoch, fitnesses[0], fitnesses[1]))
 
         gene.overwrite(pathways, fitnesses)
+        genes = gene.return_all_genotypes()
+        visualizer.show(genes)
         last_epoch = epoch
         if max(fitnesses) > best_fitness:
             best_fitness = max(fitnesses)
@@ -96,8 +100,9 @@ def main():
             fitness = model.train_model(epoch, train_loader, path, args.num_batch)
             fitnesses.append(fitness)
         print("Epoch {} :Fitnesses = {} vs {}".format(epoch, fitnesses[0], fitnesses[1]))
-
         gene.overwrite(pathways, fitnesses)
+        genes = gene.return_all_genotypes()
+        visualizer.show(genes)
         if max(fitnesses) > args.success_threshold:
                 print("Fitness achieved accuracy threshold!! Goodbye!!")
                 break
