@@ -1,4 +1,4 @@
-##Requirements
+## Requirements
 
 - Python 2.7
 - [numpy](http://www.numpy.org/)
@@ -7,12 +7,12 @@
 - [python-mnist](https://pypi.python.org/pypi/python-mnist/)
 - [pytorch](http://pytorch.org/)
 
-##Usage
+## Usage
 Install prerequisites:
 	$apt-get install python-numpy python-matplotlib
 	$pip install python-mnist networkx
 
-And install pytorch: See (http://pytorch.org/).
+And install pytorch: See http://pytorch.org/.
     	
 	
 
