@@ -9,7 +9,9 @@
 
 ## Usage
 Install prerequisites:
+
 	$apt-get install python-numpy python-matplotlib
+
 	$pip install python-mnist networkx
 
 And install pytorch: See http://pytorch.org/.
