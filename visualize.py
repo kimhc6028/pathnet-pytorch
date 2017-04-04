@@ -7,17 +7,24 @@ import numpy as np
 
 class GraphVisualize():
 
-    def __init__(self, modules):
-        self.node_size_add = 1
-        self.init_size = 10
-        self.weight_size_add = 0.1
-        self.init_weight = 0.1
+    def __init__(self, modules, vis):
+        pylab.style.use('ggplot')
 
+        self.node_size_add = 1.
+        self.init_size = 0.1
+        self.weight_size_add = 0.1
+        self.init_weight = 0.0
+        self.fixed_path = None
+        self.fixed_color = None
+        self.fixed_weight = 6.4
         pylab.ion()
         self.graph = nx.Graph()
-
         self.node_ids = {}
         node_num = 0
+
+        self.vis = vis
+        if not self.vis:
+            print("visualizing graph disabled!!")
 
         for layer_num, one_layer in enumerate(modules):
             for module_num in range(one_layer):
@@ -27,24 +34,37 @@ class GraphVisualize():
 
         pylab.show()
 
-    def get_fig(self, genes):
+    def set_fixed(self, path, color):
+        self.fixed_path = path
+        self.fixed_color = color
+
+    def get_fig(self, genes, e_color):
+        try:
+            fixed_pair = [(self.fixed_path[i], self.fixed_path[i+1]) 
+                          for i in range(len(self.fixed_path) - 1)]
+        except:
+            fixed_pair = [[[None]*3]*2]*2
+
         for gene in genes:
             gene_pair = [(gene[i], gene[i+1]) for i in range(len(gene) - 1)]
-            for layer_num, pair in enumerate(gene_pair):
+
+            for layer_num, (pair, fixed) in enumerate(zip(gene_pair, fixed_pair)):
                 for first_num in pair[0]:
                     for second_num in pair[1]:
                         first_node = self.node_ids[(layer_num, first_num)]
                         second_node = self.node_ids[(layer_num + 1, second_num)]
-                
-                    if self.graph.has_edge(first_node, second_node):
-                        self.node_upsize(first_node)
-                        self.node_upsize(second_node)
+                        if self.graph.has_edge(first_node, second_node):
+                            self.node_upsize(first_node)
+                            self.node_upsize(second_node)
+                            weight =  self.graph.get_edge_data(first_node, second_node)['weight']
+                            weight += self.weight_size_add
+                            self.graph.add_edge(first_node, second_node, color = e_color, weight = weight)
+                        else:
+                            self.graph.add_edge(first_node, second_node, color = e_color, weight = self.init_weight)
+                        
+                        if (first_node in fixed[0]) and (second_node in fixed[1]):
+                            self.graph.add_edge(first_node, second_node, color = self.fixed_color, weight = self.fixed_weight)
 
-                        weight =  self.graph.get_edge_data(first_node, second_node)['weight']
-                        weight += self.weight_size_add
-                        self.graph.add_edge(first_node, second_node, color = 'm', weight = weight)
-                    else:
-                        self.graph.add_edge(first_node, second_node, color = 'm', weight = self.init_weight)
 
         nodes = self.graph.nodes(data = True)
         node_color = 'g'
@@ -56,14 +76,14 @@ class GraphVisualize():
         weights = [self.graph[u][v]['weight'] for u,v in edges]
         nx.draw_networkx_nodes(self.graph, nodes = nodes, pos=nx.get_node_attributes(self.graph,'Position'), node_color = node_color, node_size = node_size, node_shape = node_shape)
         nx.draw_networkx_edges(self.graph, edges = edges, pos=nx.get_node_attributes(self.graph,'Position'), edge_color = edge_color, width = weights)
-        #return fig
 
-    def show(self, genes):
-        self.get_fig(genes)
-        pylab.draw()
-        pause(0.05)
-        pylab.clf()
-        self.reset()
+    def show(self, genes, color):
+        if self.vis:
+            self.get_fig(genes, color)
+            pylab.draw()
+            pause(0.05)
+            pylab.clf()
+            self.reset()
 
     def node_upsize(self, node_id):
         size = self.graph.node[node_id]['size']
@@ -77,30 +97,3 @@ class GraphVisualize():
             node[1]['size'] = self.init_size
         for edge in edges:
             self.graph.remove_edge(*edge)
-
-'''        
-graph = GraphVisualize([10,10,10])
-
-genes = [np.random.randint(0,10,(3,3)) for _ in range(64)]
-a = 0
-graph.show(genes)
-
-for i in range(100000000):
-    a += i
-genes = [np.random.randint(0,10,(3,3)) for _ in range(64)]
-graph.show(genes)
-for i in range(100000000):
-    a += i
-genes = [np.random.randint(0,10,(3,3)) for _ in range(64)]
-graph.show(genes)
-for i in range(100000000):
-    a += i
-genes = [np.random.randint(0,10,(3,3)) for _ in range(64)]
-graph.show(genes)
-for i in range(100000000):
-    a += i
-genes = [np.random.randint(0,10,(3,3)) for _ in range(64)]
-graph.show(genes)
-for i in range(100000000):
-    a += i
-'''
