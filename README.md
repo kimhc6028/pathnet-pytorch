@@ -14,8 +14,8 @@ Install prerequisites:
 
 	$ pip install python-mnist networkx
 
-And install pytorch: 
-    See http://pytorch.org/.
-    	
-	
+And install pytorch: See http://pytorch.org/.
 
+Run with command:
+
+    	 $ python main.py
