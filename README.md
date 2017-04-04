@@ -18,4 +18,4 @@ And install pytorch: See http://pytorch.org/.
 
 Run with command:
 
-$ python main.py
+    $ python main.py
