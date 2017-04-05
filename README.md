@@ -1,3 +1,6 @@
+PyTorch implementation of PathNet: Evolution Channels Gradient Descent in Super Neural Networks.
+
+
 ## Requirements
 
 - Python 2.7
@@ -20,6 +23,12 @@ Run with command:
 
     $ python main.py
     
+## Modifications
+-Learning rate is changed to 0.0001(paper) -> 0.01
+-Path genotypes is not re-initialized at second task.
+
+
 ![Alt text](./imgs/generation_180.png?raw=true "Title")
+## Result
 
 ![Alt text](./imgs/result.png?raw=true "Title")
