@@ -40,5 +40,5 @@ To check the result:
 
 
 ## Result
-Learning speed of second task was significantly faster, when two tasks share one same class.
+Learning speed of second task was significantly faster, when two tasks share one same label.
 ![Alt text](./imgs/result.png?raw=true "Title")
