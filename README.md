@@ -34,10 +34,12 @@ To check the result:
 	$ python plotter.py
 
 ## Modifications
--Learning rate is changed from 0.0001(paper) to 0.01.
--Path genotypes is not re-initialized at second task.
--Generations are limited to 100 for each task.
 
+- Learning rate is changed from 0.0001(paper) to 0.01.
+
+- Path genotypes is not re-initialized at second task.
+
+- Generations are limited to 100 for each task.
 
 ## Result
 Learning speed of second task was significantly faster, when two tasks share one same label.
