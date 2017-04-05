@@ -20,4 +20,4 @@ Run with command:
 
     $ python main.py
     
-![alt tag](https://raw.githubusercontent.com/kimhc6028/pathnet-pytorch/imgs/generation_180.png)
+![Alt text](./imgs/generation_180.png?raw=true "Title")
