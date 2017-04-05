@@ -19,3 +19,5 @@ And install pytorch: See http://pytorch.org/.
 Run with command:
 
     $ python main.py
+    
+![sdf]({{site.baseurl}}//generation_180.png)
