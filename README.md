@@ -21,3 +21,5 @@ Run with command:
     $ python main.py
     
 ![Alt text](./imgs/generation_180.png?raw=true "Title")
+
+![Alt text](./imgs/result.png?raw=true "Title")
