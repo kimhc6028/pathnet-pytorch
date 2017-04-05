@@ -19,10 +19,8 @@ parser.add_argument('--num-batch', type=int, default=50, metavar='N',
                     help='input batch number for each episode (default: 50)')
 parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                     help='input batch size for testing (default: 1000)')
-parser.add_argument('--epochs', type=int, default=300, metavar='N',
-                    help='number of maximum epochs to train (default: 300)')
-parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
-                    help='learning rate (default: 0.001)')##0.01
+parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+                    help='learning rate (default: 0.01)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
@@ -31,16 +29,22 @@ parser.add_argument('--module-num', type=int, default=[10,10,10], metavar='N',
                     help='number of modules in each layer')
 parser.add_argument('--neuron-num', type=int, default=20, metavar='N',
                     help='number of modules in each layer')
+parser.add_argument('--generation-limit', type=int, default=100, metavar='N',
+                    help='number of generation to compute')
 parser.add_argument('--noise-prob', type=float, default=0.5, metavar='N',
                     help='salt and pepper noise rate')
-parser.add_argument('--success-threshold', type=float, default=0.998, metavar='N',
+parser.add_argument('--threshold', type=float, default=0.998, metavar='N',
                     help='accuracy threshold to finish the first task')
 parser.add_argument('--readout-num', type=int, default=2, metavar='N',
                     help='number of units for readout (default: 2 for MNIST binary classification task)')
 parser.add_argument('--control', action='store_true', default=False,
                     help='controlled experiment on/off')
-parser.add_argument('--no-visualize', dest='vis', action='store_false', default=True,
+parser.add_argument('--fine-tune', action='store_true', default=False,
+                    help='fine-tuning control experiment on/off')
+parser.add_argument('--no-graph', dest='vis', action='store_false', default=True,
                     help='show graph')
+parser.add_argument('--no-save', action='store_true', default=False,
+                    help='do not save result')
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -49,7 +53,7 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
     
-def train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path, epoch, vis_color):
+def train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path, gen, vis_color):
     pathways = gene.sample()
     fitnesses = []
     train_data = [(data, target) for (data,target) in train_loader]
@@ -57,20 +61,20 @@ def train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path
         path = pathway.return_genotype()
         fitness = model.train_model(train_data, path, args.num_batch)
         fitnesses.append(fitness)
-    print("Epoch {} : Fitnesses = {} vs {}".format(epoch, fitnesses[0], fitnesses[1]))
+    print("Generation {} : Fitnesses = {} vs {}".format(gen, fitnesses[0], fitnesses[1]))
     gene.overwrite(pathways, fitnesses)
     genes = gene.return_all_genotypes()
     visualizer.show(genes, vis_color)
     if max(fitnesses) > best_fitness:
         best_fitness = max(fitnesses)
         best_path = pathways[fitnesses.index(max(fitnesses))].return_genotype()
-    return best_fitness, best_path
+    return best_fitness, best_path, max(fitnesses)
 
-def train_control(model, gene, visualizer, train_loader, epoch):        
+def train_control(model, gene, visualizer, train_loader, gen):        
     path = gene.return_control_genotype()
     train_data = [(data, target) for (data,target) in train_loader]
     fitness = model.train_model(train_data, path, args.num_batch)
-    print("Epoch {} : Fitness = {}".format(epoch, fitness))
+    print("Generation {} : Fitness = {}".format(gen, fitness))
     genes = [gene.return_control_genotype()] * 64
     visualizer.show(genes, 'm')
     return fitness
@@ -98,7 +102,6 @@ def main():
     prob = args.noise_prob
     dataset = mnist_dataset.Dataset(prob)
     labels = random.sample(range(10), 2)
-    labels = [4,5]
     print("Two training classes : {} and {}".format(labels[0], labels[1]))
     dataset.set_binary_class(labels[0], labels[1])
     train_loader = dataset.convert2tensor(args)
@@ -107,68 +110,70 @@ def main():
     print("First task started...")
     best_fitness = 0.0
     best_path = [[None] * 3] * 3
-    epoch = 0
-    while True:
-        epoch += 1
+    gen = 0
+    first_fitness = []
+
+    for gen in range(args.generation_limit):
         if not args.control:
-            best_fitness, best_path = train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path, epoch, 'm')
-            if best_fitness > args.success_threshold:
-                print("Fitness achieved accuracy threshold!! Move to next task...")
-                break
+            best_fitness, best_path, max_fitness = train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path, gen, 'm')
+            first_fitness.append(max_fitness)
 
         else: ##control experiment
-            fitness = train_control(model, gene, visualizer, train_loader, epoch)
-            if fitness > args.success_threshold:
-                print("Fitness achieved accuracy threshold!! Move to next task...")
-                break
+            fitness = train_control(model, gene, visualizer, train_loader, gen)
+            first_fitness.append(fitness)
 
-            #best_path = path
-    first_epoch = epoch
-    visualizer.set_fixed(best_path, 'r')
-
+    print("First task done!! Move to next task")
     print("Second task started...")
 
     if not args.control:
-        gene = genotype.Genetic(3, 10, 3, 64)
+        #gene = genotype.Genetic(3, 10, 3, 64)
         model.init(best_path)
-        #model.init()
+        visualizer.set_fixed(best_path, 'r')
     else:
-        model.init()##de novo
-        #pass##findtune
+        if not args.fine_tune:
+            model = pathnet.Net(args)
+            gene = genotype.Genetic(3, 10, 3, 64)
+
+    c_1 = labels[0]
+
+    while True:
+        c_2 = random.randint(0, 10-1)
+        if not c_2 == c_1:
+            break
+    labels = [c_1, c_2]
 
     print("Two training classes : {} and {}".format(labels[0], labels[1]))
-
-    labels = random.sample(range(10), 2)
-    labels = [4,5]
     dataset.set_binary_class(labels[0], labels[1])
     train_loader = dataset.convert2tensor(args)
 
     best_fitness = 0.0    
     best_path = [[None] * 3] * 3
-    for epoch in range(1 + first_epoch, args.epochs + 1 + first_epoch):
+    gen = 0
+
+    second_fitness = []
+    for gen in range(args.generation_limit):
         if not args.control:
-            best_fitness, best_path = train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path, epoch, 'c')
-            if best_fitness > args.success_threshold:
-                print("Fitness achieved accuracy threshold!! Move to next task...")
-                break
+            best_fitness, best_path, max_fitness = train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path, gen, 'c')
+            second_fitness.append(max_fitness)
 
         else: ##control experiment
-            fitness = train_control(model, gene, visualizer, train_loader, epoch)
-            if fitness > args.success_threshold:
-                print("Fitness achieved accuracy threshold!! Move to next task...")
-                break
+            fitness = train_control(model, gene, visualizer, train_loader, gen)
+            second_fitness.append(fitness)
 
-    second_epoch = epoch - first_epoch
-    print "first {}, second{}".format(first_epoch, second_epoch)
+    print("Second task done!! Goodbye!!")
 
-    if args.control:
-        result.append(('control', first_epoch, second_epoch))
-    else:
-        result.append(('pathnet', first_epoch, second_epoch))
+    if not args.no_save:
+        if args.control:
+            if args.fine_tune:
+                result.append(('fine_tune', args.threshold, first_fitness, second_fitness))
+            else:
+                result.append(('control', args.threshold, first_fitness, second_fitness))
+        else:
+            result.append(('pathnet', args.threshold, first_fitness, second_fitness))
 
-    f = open('./result/result.pickle', 'w')
-    pickle.dump(result, f)
-    f.close()
+        f = open('./result/result.pickle', 'w')
+        pickle.dump(result, f)
+        f.close()
 
 if __name__ == '__main__':
     main()

@@ -12,9 +12,8 @@ class Net(nn.Module):
     def __init__(self, args):
         super(Net, self).__init__()
         self.args = args
-        best_path = [[None] * 3] * 3
         self.final_layers = []
-        self.init(best_path)
+        self.init()
 
     def init(self, best_path = [[None] * 3] * 3):
         neuron_num = self.args.neuron_num
@@ -24,30 +23,22 @@ class Net(nn.Module):
         self.fc1 = []
         self.fc2 = []
         self.fc3 = []
-        ##
-        print best_path
-        ##
+
         for i in range(module_num[0]):
             if not i in best_path[0]:
                 """All parameters should be declared as member variable, so I think this is the simplest way to do so"""
                 exec("self.m1" + str(i) + " = nn.Linear(28*28," + str(neuron_num) + ")")
-            else:
-                exec("print self.m1" + str(i))
             exec("self.fc1.append(self.m1" + str(i) + ")")
 
         for i in range(module_num[1]):
             if not i in best_path[1]:
                 exec("self.m2" + str(i) + " = nn.Linear(" + str(neuron_num) + "," + str(neuron_num) + ")")
-            else:
-                exec("print self.m2" + str(i))
             exec("self.fc2.append(self.m2" + str(i) + ")")
 
         for i in range(module_num[2]):
             if not i in best_path[2]:
                 #exec("self.m3" + str(i) + " = nn.Linear(" + str(neuron_num) + ", 10)")
                 exec("self.m3" + str(i) + " = nn.Linear(" + str(neuron_num) + "," + str(neuron_num) + ")")
-            else:
-                exec("print self.m3" + str(i))
             exec("self.fc3.append(self.m3" + str(i) + ")")
 
         """final layer which is not inclued in pathnet. Independent for each task"""
@@ -70,7 +61,8 @@ class Net(nn.Module):
                     
         p = {'params': self.final_layers[-1].parameters()}
         trainable_params.append(p)
-        self.optimizer = optim.Adam(trainable_params, lr=self.args.lr)
+        self.optimizer = optim.SGD(trainable_params, lr=self.args.lr)
+
         if self.args.cuda:
             self.cuda()
 
@@ -79,11 +71,8 @@ class Net(nn.Module):
         x = F.relu(self.fc1[path[0][0]](x)) + F.relu(self.fc1[path[0][1]](x)) + F.relu(self.fc1[path[0][2]](x))
         x = F.relu(self.fc2[path[1][0]](x)) + F.relu(self.fc2[path[1][1]](x)) + F.relu(self.fc2[path[1][2]](x))
         x = F.relu(self.fc3[path[2][0]](x)) + F.relu(self.fc3[path[2][1]](x)) + F.relu(self.fc3[path[2][2]](x))
-        #x = self.final_layers[-1](x)
         x = self.final_layers[last](x)
-        
         return x
-        #return F.log_softmax(x)
 
     def train_model(self, train_loader, path, num_batch):
         self.train()
@@ -94,12 +83,10 @@ class Net(nn.Module):
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
             self.optimizer.zero_grad()
-            #output = self(data, path)
             output = self(data, path, -1)
             pred = output.data.max(1)[1] # get the index of the max log-probability
             fitness += pred.eq(target.data).cpu().sum()
             train_len += len(target.data)
-            #loss = F.nll_loss(output, target)
             loss = F.cross_entropy(output, target)
             loss.backward()
             self.optimizer.step()
@@ -123,6 +110,5 @@ class Net(nn.Module):
             train_len += len(target.data)
             if batch_idx > 1000:
                 break
-
         fitness = fitness / train_len
         return fitness
