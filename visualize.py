@@ -83,11 +83,13 @@ class GraphVisualize():
         nx.draw_networkx_nodes(self.graph, nodes = nodes, pos=nx.get_node_attributes(self.graph,'Position'), node_color = node_color, node_size = node_size, node_shape = node_shape)
         nx.draw_networkx_edges(self.graph, edges = edges, pos=nx.get_node_attributes(self.graph,'Position'), edge_color = edge_color, width = weights)
 
-    def show(self, genes, color):
+    def show(self, genes, color, gen):
         if self.vis:
             self.get_fig(genes, color)
             pylab.draw()
             pause(0.05)
+            if gen % 20 == 0:
+                pylab.savefig('./imgs/generation_{}.png'.format(gen))
             pylab.clf()
             self.reset()
 
