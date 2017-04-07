@@ -27,7 +27,10 @@ class Net(nn.Module):
         for i in range(module_num[0]):
             if not i in best_path[0]:
                 """All parameters should be declared as member variable, so I think this is the simplest way to do so"""
-                exec("self.m1" + str(i) + " = nn.Linear(28*28," + str(neuron_num) + ")")
+                if not self.args.cifar_svhn:
+                    exec("self.m1" + str(i) + " = nn.Linear(28*28," + str(neuron_num) + ")")
+                else:
+                    exec("self.m1" + str(i) + " = nn.Linear(32*32*3," + str(neuron_num) + ")")
             exec("self.fc1.append(self.m1" + str(i) + ")")
 
         for i in range(module_num[1]):
@@ -67,7 +70,10 @@ class Net(nn.Module):
             self.cuda()
 
     def forward(self, x, path, last):
-        x = x.view(-1, 28*28)
+        if not self.args.cifar_svhn:
+            x = x.view(-1, 28*28)
+        else:
+            x = x.view(-1, 32*32*3)
         x = F.relu(self.fc1[path[0][0]](x)) + F.relu(self.fc1[path[0][1]](x)) + F.relu(self.fc1[path[0][2]](x))
         x = F.relu(self.fc2[path[1][0]](x)) + F.relu(self.fc2[path[1][1]](x)) + F.relu(self.fc2[path[1][2]](x))
         x = F.relu(self.fc3[path[2][0]](x)) + F.relu(self.fc3[path[2][1]](x)) + F.relu(self.fc3[path[2][2]](x))

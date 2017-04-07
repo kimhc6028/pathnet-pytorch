@@ -55,6 +55,7 @@ class Dataset():
     def convert2tensor(self, args):
         data = np.asarray([e[0] for e in self.binary_train_dataset])
         target = np.asarray([e[1] for e in self.binary_train_dataset])
+
         tensor_data = torch.from_numpy(data)
         tensor_data = tensor_data.float()
         tensor_target = torch.from_numpy(target)

@@ -9,7 +9,10 @@ from torchvision import datasets, transforms
 import pathnet
 import genotype
 import mnist_dataset
+import svhn_dataset
+import cifar_dataset
 import visualize
+import get_svhn_data
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
@@ -17,8 +20,6 @@ parser.add_argument('--batch-size', type=int, default=16, metavar='N',
                     help='input batch size for training (default: 16)')
 parser.add_argument('--num-batch', type=int, default=50, metavar='N',
                     help='input batch number for each episode (default: 50)')
-parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
-                    help='input batch size for testing (default: 1000)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -45,14 +46,42 @@ parser.add_argument('--no-graph', dest='vis', action='store_false', default=True
                     help='show graph')
 parser.add_argument('--no-save', action='store_true', default=False,
                     help='do not save result')
+parser.add_argument('--cifar-svhn', action='store_true', default=False,
+                    help='cifar-svhn task')
+parser.add_argument('--trainset-limit', type=int, default=20000, metavar='N',
+                    help='training dataset limitation for RAM')
+parser.add_argument('--testset-limit', type=int, default=1000, metavar='N',
+                    help='test dataset limitation for RAM')
+parser.add_argument('--cifar-first', action='store_true', default=False,
+                    help='cifar trained first')
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+if args.cifar_svhn:
+    """cifar-svhn setting"""
+    print("Warning : CIFAR-SVHN setting activated!! Following parsers may be ignored :")
+    print("--module-num, --generation-limit, --readout-num")
+    args.module_num = [20,20,20]
+    args.generation_limit = 500
+    args.readout_num = 10
 
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
-    
+
+def cifar_svhn_data(cifar):
+    if cifar:
+        print("Extracting cifar dataset...")
+        cifar = cifar_dataset.Dataset(args)
+        train_loader, test_loader = cifar.return_dataset()
+    else:
+        print("Extracting cSVHN dataset...")
+        svhn = svhn_dataset.Dataset(args)
+        train_loader, test_loader = svhn.return_dataset()
+    return train_loader, test_loader
+
+
 def train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path, gen, vis_color):
     pathways = gene.sample()
     fitnesses = []
@@ -81,30 +110,54 @@ def train_control(model, gene, visualizer, train_loader, gen):
 
 def main():
     model = pathnet.Net(args)
-    gene = genotype.Genetic(3, 10, 3, 64)
+    if not args.cifar_svhn:
+        gene = genotype.Genetic(3, 10, 3, 64)
+    else:
+        gene = genotype.Genetic(3, 20, 5, 64)
+
     visualizer = visualize.GraphVisualize(args.module_num, args.vis)
     
     if args.cuda:
         model.cuda()
     
-    if not os.path.isdir('./data/mnist'):
-        os.system('./get_mnist_data.sh')
-
     if not os.path.isdir('./result'):
         os.makedirs("./result")
-    if os.path.exists('./result/result.pickle'):
-        f = open('./result/result.pickle','r')
-        result = pickle.load(f)
-        f.close()
-    else:
-        result = []
+    if not os.path.isdir('./data'):
+        os.makedirs("./data")
 
-    prob = args.noise_prob
-    dataset = mnist_dataset.Dataset(prob)
-    labels = random.sample(range(10), 2)
-    print("Two training classes : {} and {}".format(labels[0], labels[1]))
-    dataset.set_binary_class(labels[0], labels[1])
-    train_loader = dataset.convert2tensor(args)
+    if not args.cifar_svhn:
+        if not os.path.isdir('./data/mnist'):
+            os.system('./get_mnist_data.sh')
+
+        if os.path.exists('./result/result_mnist.pickle'):
+            f = open('./result/result_mnist.pickle','r')
+            result = pickle.load(f)
+            f.close()
+        else:
+            result = []
+
+        prob = args.noise_prob
+        dataset = mnist_dataset.Dataset(prob)
+        labels = random.sample(range(10), 2)
+        print("Two training classes : {} and {}".format(labels[0], labels[1]))
+        dataset.set_binary_class(labels[0], labels[1])
+        train_loader = dataset.convert2tensor(args)
+
+    else:
+        get_svhn_data.download()
+
+        if not os.path.isdir('./data/cifar'):
+            os.system('./get_cifar10_data.sh')
+        
+        if os.path.exists('./result/result_cifar.pickle'):
+            f = open('./result/result_cifar.pickle','r')
+            result = pickle.load(f)
+            f.close()
+        else:
+            result = []
+
+        train_loader, test_loader = cifar_svhn_data(args.cifar_first)
+
 
     """first task"""
     print("First task started...")
@@ -112,7 +165,6 @@ def main():
     best_path = [[None] * 3] * 3
     gen = 0
     first_fitness = []
-
     for gen in range(args.generation_limit):
         if not args.control:
             best_fitness, best_path, max_fitness = train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path, gen, 'm')
@@ -126,25 +178,38 @@ def main():
     print("Second task started...")
 
     if not args.control:
-        #gene = genotype.Genetic(3, 10, 3, 64)
+        if not args.cifar_svhn:
+            gene = genotype.Genetic(3, 10, 3, 64)
+        else:
+            gene = genotype.Genetic(3, 20, 5, 64)
+
+        gene = genotype.Genetic(3, 10, 3, 64)
         model.init(best_path)
         visualizer.set_fixed(best_path, 'r')
     else:
         if not args.fine_tune:
             model = pathnet.Net(args)
-            gene = genotype.Genetic(3, 10, 3, 64)
+            if not args.cifar_svhn:
+                gene = genotype.Genetic(3, 10, 3, 64)
+            else:
+                gene = genotype.Genetic(3, 20, 5, 64)
 
-    c_1 = labels[0]
+    #labels = random.sample(range(10), 2)
+    if not args.cifar_svhn:
+        c_1 = labels[0]
+        
+        while True:
+            c_2 = random.randint(0, 10-1)
+            if not c_2 == c_1:
+                break
+        labels = [c_1, c_2]
+        print("Two training classes : {} and {}".format(labels[0], labels[1]))
+        dataset.set_binary_class(labels[0], labels[1])
+        train_loader = dataset.convert2tensor(args)
 
-    while True:
-        c_2 = random.randint(0, 10-1)
-        if not c_2 == c_1:
-            break
-    labels = [c_1, c_2]
+    else:
+        train_loader, test_loader = cifar_svhn_data(not args.cifar_first)
 
-    print("Two training classes : {} and {}".format(labels[0], labels[1]))
-    dataset.set_binary_class(labels[0], labels[1])
-    train_loader = dataset.convert2tensor(args)
 
     best_fitness = 0.0    
     best_path = [[None] * 3] * 3
@@ -169,9 +234,18 @@ def main():
             else:
                 result.append(('control', args.threshold, first_fitness, second_fitness))
         else:
-            result.append(('pathnet', args.threshold, first_fitness, second_fitness))
+            if not args.cifar_svhn:
+                result.append(('pathnet', args.threshold, first_fitness, second_fitness))
+            else:
+                if args.cifar_first:
+                    result.append(('pathnet_cifar_first', args.threshold, first_fitness, second_fitness))
+                else:
+                    result.append(('pathnet_svhn_first', args.threshold, first_fitness, second_fitness))
 
-        f = open('./result/result.pickle', 'w')
+        if not args.cifar_svhn:
+            f = open('./result/result_mnist.pickle', 'w')
+        else:
+            f = open('./result/result_cifar_svhn.pickle', 'w')
         pickle.dump(result, f)
         f.close()
 

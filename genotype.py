@@ -52,26 +52,9 @@ class Genetic():
     def sample(self):
         return random.sample(self.genotypes, 2)
 
-    '''
-    def exclude_sample(self, best_path):
-        excluded = []
-        for genotype in self.genotypes:
-            gene = genotype.return_genotype()
-            for i,ex in enumerate(gene):
-                for e in ex:
-                    if e in best_path[i]:
-                        break
-                
-
-        a = random.sample(self.genotypes, 1)[0]
-
-        return random.sample(self.genotypes, 2)
-    '''
-
     def overwrite(self, genotypes, fitnesses):
         win = genotypes[fitnesses.index(max(fitnesses))]
         lose = genotypes[fitnesses.index(min(fitnesses))]
         genotype = win.return_genotype()
-
         lose.overwrite(genotype)
         lose.mutate()
