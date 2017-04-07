@@ -37,10 +37,10 @@ To check the result:
 
 - Learning rate is changed from 0.0001(paper) to 0.01.
 
-- Path genotypes is not re-initialized at second task.
-
 - Generations are limited to 100 for each task.
 
 ## Result
-Learning speed of second task was significantly faster, when two tasks share one same label.
-![Alt text](./imgs/result.png?raw=true "Title")
+
+Transfer learning of CIFAR10 -> cropped SVHN recorded higher accuracy than cropped SVHN classification accuracy solely (41.5% -> 51.8%, Second figure).
+
+![Alt text](./imgs/result_cifar_svhn.png?raw=true "Title")
