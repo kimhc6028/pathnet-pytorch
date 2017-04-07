@@ -1,6 +1,6 @@
 PyTorch implementation of [PathNet: Evolution Channels Gradient Descent in Super Neural Networks](https://arxiv.org/abs/1701.08734). 
 "It is a neural network algorithm that uses agents embedded in the neural network whose task is to discover which parts of the network to re-use for new tasks"
-Currently implemented binary MNIST task.
+Currently implemented binary MNIST task and CIFAR & cropped SVHN classification task.
 ![Alt text](./imgs/Network_transition.png?raw=true "Title")
 
 ## Requirements
@@ -36,8 +36,6 @@ To check the result:
 ## Modifications
 
 - Learning rate is changed from 0.0001(paper) to 0.01.
-
-- Generations are limited to 100 for each task.
 
 ## Result
 
