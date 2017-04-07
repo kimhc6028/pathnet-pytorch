@@ -24,13 +24,23 @@ And install pytorch: See http://pytorch.org/.
 Run with command:
 
     $ python main.py
-    
-## Modifications
--Learning rate is changed from 0.0001(paper) to 0.01.
--Path genotypes is not re-initialized at second task.
--Generations are limited to 100 for each task.
 
+If you want to repeat experiment:
+
+    $ ./repeat_experiment.sh
+
+To check the result:
+
+	$ python plotter.py
+
+## Modifications
+
+- Learning rate is changed from 0.0001(paper) to 0.01.
+
+- Path genotypes is not re-initialized at second task.
+
+- Generations are limited to 100 for each task.
 
 ## Result
-Learning speed of second task was significantly faster, when two tasks share one same class.
+Learning speed of second task was significantly faster, when two tasks share one same label.
 ![Alt text](./imgs/result.png?raw=true "Title")
