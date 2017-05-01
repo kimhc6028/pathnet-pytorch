@@ -21,7 +21,7 @@ def subplot(subplot, data_first, data_second, title):
     y_second = np.mean(data_second, axis=0)
     y_first_err = np.std(data_first, axis=0) / 2.
     y_second_err = np.std(data_second, axis=0) / 2. 
-
+    
     plt.fill_between(x, y_first - y_first_err, y_first + y_first_err, color='m', alpha=0.3)
     plt.fill_between(x, y_second - y_second_err, y_second + y_second_err, color='c', alpha=0.3)
     plt.plot(x, y_first, color='r', label='Task A')

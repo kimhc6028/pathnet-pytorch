@@ -149,8 +149,8 @@ def main():
         if not os.path.isdir('./data/cifar'):
             os.system('./get_cifar10_data.sh')
         
-        if os.path.exists('./result/result_cifar.pickle'):
-            f = open('./result/result_cifar.pickle','r')
+        if os.path.exists('./result/result_cifar_svhn.pickle'):
+            f = open('./result/result_cifar_svhn.pickle','r')
             result = pickle.load(f)
             f.close()
         else:
