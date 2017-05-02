@@ -16,6 +16,16 @@ import get_svhn_data
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+
+
+parser.add_argument('--L', type=int, default=3, metavar='N',
+                    help='layers')
+parser.add_argument('--M', type=int, default=10, metavar='N',
+                    help='units in each layer')
+parser.add_argument('--N', type=int, default=3, metavar='N',
+                    help='number of active units')
+parser.add_argument('--pop', type=int, default=64, metavar='N',
+                    help='number of gene')
 parser.add_argument('--batch-size', type=int, default=16, metavar='N',
                     help='input batch size for training (default: 16)')
 parser.add_argument('--num-batch', type=int, default=50, metavar='N',
@@ -26,10 +36,8 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-parser.add_argument('--module-num', type=int, default=[10,10,10], metavar='N',
-                    help='number of modules in each layer')
 parser.add_argument('--neuron-num', type=int, default=20, metavar='N',
-                    help='number of modules in each layer')
+                    help='number of neuron in each module')
 parser.add_argument('--generation-limit', type=int, default=100, metavar='N',
                     help='number of generation to compute')
 parser.add_argument('--noise-prob', type=float, default=0.5, metavar='N',
@@ -58,13 +66,6 @@ parser.add_argument('--cifar-first', action='store_true', default=False,
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
-if args.cifar_svhn:
-    """cifar-svhn setting"""
-    print("Warning : CIFAR-SVHN setting activated!! Following parsers may be ignored :")
-    print("--module-num, --generation-limit, --readout-num")
-    args.module_num = [20,20,20]
-    args.generation_limit = 500
-    args.readout_num = 10
 
 torch.manual_seed(args.seed)
 if args.cuda:
@@ -91,6 +92,7 @@ def train_pathnet(model, gene, visualizer, train_loader, best_fitness, best_path
         fitness = model.train_model(train_data, path, args.num_batch)
         fitnesses.append(fitness)
     print("Generation {} : Fitnesses = {} vs {}".format(gen, fitnesses[0], fitnesses[1]))
+
     gene.overwrite(pathways, fitnesses)
     genes = gene.return_all_genotypes()
     visualizer.show(genes, vis_color)
@@ -104,18 +106,15 @@ def train_control(model, gene, visualizer, train_loader, gen):
     train_data = [(data, target) for (data,target) in train_loader]
     fitness = model.train_model(train_data, path, args.num_batch)
     print("Generation {} : Fitness = {}".format(gen, fitness))
-    genes = [gene.return_control_genotype()] * 64
+    genes = [gene.return_control_genotype()] * args.pop
     visualizer.show(genes, 'm')
     return fitness
 
 def main():
     model = pathnet.Net(args)
-    if not args.cifar_svhn:
-        gene = genotype.Genetic(3, 10, 3, 64)
-    else:
-        gene = genotype.Genetic(3, 20, 5, 64)
-
-    visualizer = visualize.GraphVisualize(args.module_num, args.vis)
+    gene = genotype.Genetic(args.L, args.M, args.N, args.pop)
+    module_num = [args.M] * args.L
+    visualizer = visualize.GraphVisualize(module_num, args.vis)
     
     if args.cuda:
         model.cuda()
@@ -162,7 +161,7 @@ def main():
     """first task"""
     print("First task started...")
     best_fitness = 0.0
-    best_path = [[None] * 3] * 3
+    best_path = [[None] * args.N] * args.L
     gen = 0
     first_fitness = []
     for gen in range(args.generation_limit):
@@ -178,22 +177,27 @@ def main():
     print("Second task started...")
 
     if not args.control:
+        gene = genotype.Genetic(args.L, args.M, args.N, args.pop)
+        '''
         if not args.cifar_svhn:
             gene = genotype.Genetic(3, 10, 3, 64)
         else:
             gene = genotype.Genetic(3, 20, 5, 64)
 
         gene = genotype.Genetic(3, 10, 3, 64)
+        '''
         model.init(best_path)
         visualizer.set_fixed(best_path, 'r')
     else:
         if not args.fine_tune:
             model = pathnet.Net(args)
+            gene = genotype.Genetic(args.L, args.M, args.N, args.pop)
+            '''
             if not args.cifar_svhn:
                 gene = genotype.Genetic(3, 10, 3, 64)
             else:
                 gene = genotype.Genetic(3, 20, 5, 64)
-
+            '''
     #labels = random.sample(range(10), 2)
     if not args.cifar_svhn:
         c_1 = labels[0]
@@ -212,7 +216,8 @@ def main():
 
 
     best_fitness = 0.0    
-    best_path = [[None] * 3] * 3
+    #best_path = [[None] * 3] * 3
+    best_path = [[None] * args.N] * args.L
     gen = 0
 
     second_fitness = []

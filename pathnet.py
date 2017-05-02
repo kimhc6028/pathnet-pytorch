@@ -13,11 +13,15 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.args = args
         self.final_layers = []
-        self.init()
+        self.init(None)
 
-    def init(self, best_path = [[None] * 3] * 3):
+    def init(self, best_path):
+        if best_path == None:
+            best_path = [[None] * self.args.M] * self.args.L
+
         neuron_num = self.args.neuron_num
-        module_num = self.args.module_num
+        module_num = [self.args.M] * self.args.L
+        #module_num = self.args.module_num
 
         """Initialize all parameters"""
         self.fc1 = []
@@ -74,9 +78,29 @@ class Net(nn.Module):
             x = x.view(-1, 28*28)
         else:
             x = x.view(-1, 32*32*3)
+        
+        M = self.args.M
+        #for i in range(self.args.L):
+        y = F.relu(self.fc1[path[0][0]](x))
+        for j in range(1,self.args.N):
+            y += F.relu(self.fc1[path[0][j]](x))
+        x = y
+
+        y = F.relu(self.fc2[path[1][0]](x))
+        for j in range(1,self.args.N):
+            y += F.relu(self.fc2[path[1][j]](x))
+        x = y
+
+        y = F.relu(self.fc3[path[1][0]](x))
+        for j in range(1,self.args.N):
+            y += F.relu(self.fc3[path[2][j]](x))
+        x = y
+
+        '''
         x = F.relu(self.fc1[path[0][0]](x)) + F.relu(self.fc1[path[0][1]](x)) + F.relu(self.fc1[path[0][2]](x))
         x = F.relu(self.fc2[path[1][0]](x)) + F.relu(self.fc2[path[1][1]](x)) + F.relu(self.fc2[path[1][2]](x))
         x = F.relu(self.fc3[path[2][0]](x)) + F.relu(self.fc3[path[2][1]](x)) + F.relu(self.fc3[path[2][2]](x))
+        '''
         x = self.final_layers[last](x)
         return x
 
