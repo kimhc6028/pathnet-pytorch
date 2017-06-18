@@ -16,7 +16,7 @@ class Net(nn.Module):
         self.init(None)
 
     def init(self, best_path):
-        if best_path == None:
+        if best_path is None:
             best_path = [[None] * self.args.M] * self.args.L
 
         neuron_num = self.args.neuron_num
