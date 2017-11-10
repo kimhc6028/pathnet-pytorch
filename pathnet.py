@@ -91,7 +91,7 @@ class Net(nn.Module):
             y += F.relu(self.fc2[path[1][j]](x))
         x = y
 
-        y = F.relu(self.fc3[path[1][0]](x))
+        y = F.relu(self.fc3[path[2][0]](x))
         for j in range(1,self.args.N):
             y += F.relu(self.fc3[path[2][j]](x))
         x = y
